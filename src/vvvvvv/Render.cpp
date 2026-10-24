@@ -28,6 +28,11 @@
 #include "UtilityClass.h"
 #include "VFormat.h"
 
+#ifdef GNW
+#include "vv_core.h"
+#include "vv_sdl.h"
+#endif
+
 static int tr;
 static int tg;
 static int tb;
@@ -2296,6 +2301,9 @@ static void mode_indicator_text(const int alpha)
 
 void gamerender(void)
 {
+#ifdef GNW
+    vv_core_game_frame(); /* the copy of the game behind the menus is old */
+#endif
     graphics.set_render_target(graphics.gameplayTexture);
     graphics.set_color(0, 0, 0, 255);
 
@@ -2916,6 +2924,10 @@ void maprender(void)
 {
     graphics.set_render_target(graphics.menuTexture);
     graphics.clear();
+#ifdef GNW
+    /* the frozen game behind the menu while it slides (menuoffrender) */
+    vv_core_menu_begin();
+#endif
 
     draw_roomname_menu();
 
@@ -3427,6 +3439,9 @@ void maprender(void)
     }
 
     graphics.set_render_target(graphics.gameTexture);
+#ifdef GNW
+    vv_sdl_set_offset(0, 0); /* the menu is drawn */
+#endif
 
     if (graphics.resumegamemode || graphics.menuoffset > 0 || graphics.oldmenuoffset > 0)
     {
@@ -3460,6 +3475,10 @@ void teleporterrender(void)
 {
     graphics.set_render_target(graphics.menuTexture);
     graphics.clear();
+#ifdef GNW
+    /* the frozen game behind the menu while it slides (menuoffrender) */
+    vv_core_menu_begin();
+#endif
 
     const int telex = map.teleporters[game.teleport_to_teleporter].x;
     const int teley = map.teleporters[game.teleport_to_teleporter].y;
@@ -3530,6 +3549,9 @@ void teleporterrender(void)
     }
 
     graphics.set_render_target(graphics.gameTexture);
+#ifdef GNW
+    vv_sdl_set_offset(0, 0); /* the menu is drawn */
+#endif
 
     if (graphics.resumegamemode || graphics.menuoffset > 0 || graphics.oldmenuoffset > 0)
     {

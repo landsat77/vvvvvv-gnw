@@ -20,9 +20,17 @@ public:
 
     void loadmap(void);
 
+#ifdef GNW
+    /* the tables of the pack (vv_levels.bin), read in place; loaded at
+     * first use (the pack is not open yet when the constructor runs) */
+    const short* back;
+    const short* contents;
+    const short* minitower;
+#else
     short back[40 * 120];
     short contents[40 * 700];
     short minitower[40 * 100];
+#endif
 
     bool minitowermode;
 };

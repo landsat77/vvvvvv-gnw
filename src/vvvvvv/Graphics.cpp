@@ -1,6 +1,11 @@
 #define GRAPHICS_DEFINITION
 #include "Graphics.h"
 
+#ifdef GNW
+#include "vv_sdl.h"
+#include "vv_core.h"
+#endif
+
 #include <SDL.h>
 
 #include "Alloc.h"
@@ -193,6 +198,14 @@ void Graphics::create_buffers(void)
     tempScrollingTexture = CREATE_SCROLL_TEXTURE;
     towerbg.texture = CREATE_SCROLL_TEXTURE;
     titlebg.texture = CREATE_SCROLL_TEXTURE;
+
+#ifdef GNW
+    /* vv_sdl.c: these are the frame being drawn, the others draw nowhere
+     * (their contents are drawn straight to the frame, below) */
+    vv_sdl_texture_is_screen(gameTexture);
+    vv_sdl_texture_is_screen(gameplayTexture);
+    vv_sdl_texture_is_screen(menuTexture);
+#endif
 
 #undef CREATE_SCROLL_TEXTURE
 #undef CREATE_TEXTURE
@@ -1781,6 +1794,45 @@ void Graphics::drawcoloredtile(
 }
 
 
+#ifdef GNW
+/* Hitest() of two 32x32 frames of the sprite sheet (sprites.png or
+ * flipsprites.png, an 8 bit surface over the pack): the same test, on the
+ * red channel of the pixels (see the INTENTIONAL BUG below) */
+bool Graphics::Hitest_frames(bool flip, int frame1, SDL_Point p1, int frame2, SDL_Point p2)
+{
+    const SDL_Surface* sheet = flip ? grphx.im_flipsprites_surf : grphx.im_sprites_surf;
+    if (sheet == NULL)
+    {
+        return false;
+    }
+    const int per_row = sheet->w / 32;
+    const int frames = per_row * (sheet->h / 32);
+    if (frame1 < 0 || frame2 < 0 || frame1 >= frames || frame2 >= frames)
+    {
+        return false;
+    }
+    const SDL_Color* colors = sheet->format->palette->colors;
+    const Uint8* pix = (const Uint8*) sheet->pixels;
+    const Uint8* f1 = pix + (frame1 / per_row) * 32 * sheet->pitch + (frame1 % per_row) * 32;
+    const Uint8* f2 = pix + (frame2 / per_row) * 32 * sheet->pitch + (frame2 % per_row) * 32;
+
+    const int x0 = SDL_max(p1.x, p2.x), x1 = SDL_min(p1.x + 32, p2.x + 32);
+    const int y0 = SDL_max(p1.y, p2.y), y1 = SDL_min(p1.y + 32, p2.y + 32);
+    for (int x = x0; x < x1; x++)
+    {
+        for (int y = y0; y < y1; y++)
+        {
+            if (colors[f1[(y - p1.y) * sheet->pitch + (x - p1.x)]].r != 0
+            && colors[f2[(y - p2.y) * sheet->pitch + (x - p2.x)]].r != 0)
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+#endif
+
 bool Graphics::Hitest(SDL_Surface* surface1, SDL_Point p1, SDL_Surface* surface2, SDL_Point p2)
 {
 
@@ -2506,9 +2558,30 @@ void Graphics::drawbackground( int t )
         clear();
 
         const int offset = (int) lerp(-3, 0);
+#ifdef GNW
+        /* What updatebackground() scrolled into backgroundTexture: blocks
+         * of 2x2 tiles at x = 16n - 3 - backoffset in the texture, shown
+         * from x = 8 + offset. */
+        {
+            const int temp = 680 + (rcol * 3);
+            const int x0 = -3 - backoffset - (8 + offset);
+            for (int j = 0; j < 15; j++)
+            {
+                for (int x = x0; x < SCREEN_WIDTH_PIXELS; x += 16)
+                {
+                    if (x + 16 <= 0) continue;
+                    drawtile2(x, (j * 16), temp + 40);
+                    drawtile2(x + 8, (j * 16), temp + 41);
+                    drawtile2(x, (j * 16) + 8, temp + 80);
+                    drawtile2(x + 8, (j * 16) + 8, temp + 81);
+                }
+            }
+        }
+#else
         const SDL_Rect srcRect = {8 + offset, 0, SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS};
 
         copy_texture(backgroundTexture, &srcRect, NULL);
+#endif
         break;
     }
     case 4: //Warp zone (vertical)
@@ -2516,9 +2589,28 @@ void Graphics::drawbackground( int t )
         clear();
 
         const int offset = (int) lerp(-3, 0);
+#ifdef GNW
+        /* blocks at y = 16n - 3 - backoffset, shown from y = 8 + offset */
+        {
+            const int temp = 760 + (rcol * 3);
+            const int y0 = -3 - backoffset - (8 + offset);
+            for (int y = y0; y < SCREEN_HEIGHT_PIXELS; y += 16)
+            {
+                if (y + 16 <= 0) continue;
+                for (int i = 0; i < 21; i++)
+                {
+                    drawtile2((i * 16), y, temp + 40);
+                    drawtile2((i * 16) + 8, y, temp + 41);
+                    drawtile2((i * 16), y + 8, temp + 80);
+                    drawtile2((i * 16) + 8, y + 8, temp + 81);
+                }
+            }
+        }
+#else
         const SDL_Rect srcRect = {0, 8 + offset, SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS};
 
         copy_texture(backgroundTexture, &srcRect, NULL);
+#endif
         break;
     }
     case 5:
@@ -2693,6 +2785,14 @@ void Graphics::updatebackground(int t)
         backoffset += 3;
         if (backoffset >= 16) backoffset -= 16;
 
+#ifdef GNW
+        if (!backgrounddrawn)
+        {
+            backoffset = 0;
+            backgrounddrawn = true;
+        }
+        break;
+#endif
         SDL_Texture* target = SDL_GetRenderTarget(gameScreen.m_renderer);
         set_render_target(backgroundTexture);
 
@@ -2736,6 +2836,14 @@ void Graphics::updatebackground(int t)
         backoffset += 3;
         if (backoffset >= 16) backoffset -= 16;
 
+#ifdef GNW
+        if (!backgrounddrawn)
+        {
+            backoffset = 0;
+            backgrounddrawn = true;
+        }
+        break;
+#endif
         SDL_Texture* target = SDL_GetRenderTarget(gameScreen.m_renderer);
         set_render_target(backgroundTexture);
 
@@ -2801,13 +2909,18 @@ void Graphics::updatebackground(int t)
 
 void Graphics::drawmap(void)
 {
+#ifdef GNW
+    foregrounddrawn = false; /* no cache: drawn to the frame below */
+#endif
     if (!foregrounddrawn)
     {
+#ifndef GNW
         SDL_Texture* target = SDL_GetRenderTarget(gameScreen.m_renderer);
 
         set_render_target(foregroundTexture);
         set_blendmode(foregroundTexture, SDL_BLENDMODE_BLEND);
         clear(0, 0, 0, 0);
+#endif
 
         for (int y = 0; y < 30; y++)
         {
@@ -2844,22 +2957,31 @@ void Graphics::drawmap(void)
             }
         }
 
+#ifndef GNW
         set_render_target(target);
+#endif
         foregrounddrawn = true;
     }
 
+#ifndef GNW
     copy_texture(foregroundTexture, NULL, NULL);
+#endif
 }
 
 void Graphics::drawfinalmap(void)
 {
+#ifdef GNW
+    foregrounddrawn = false; /* no cache: drawn to the frame below */
+#endif
     if (!foregrounddrawn)
     {
+#ifndef GNW
         SDL_Texture* target = SDL_GetRenderTarget(gameScreen.m_renderer);
 
         set_render_target(foregroundTexture);
         set_blendmode(foregroundTexture, SDL_BLENDMODE_BLEND);
         clear(0, 0, 0, 0);
+#endif
         if (map.tileset == 0) {
             for (int j = 0; j < 30; j++) {
                 for (int i = 0; i < 40; i++) {
@@ -2876,11 +2998,15 @@ void Graphics::drawfinalmap(void)
                 }
             }
         }
+#ifndef GNW
         set_render_target(target);
+#endif
         foregrounddrawn = true;
     }
 
+#ifndef GNW
     copy_texture(foregroundTexture, NULL, NULL);
+#endif
 }
 
 void Graphics::drawtowermap(void)
@@ -2915,14 +3041,46 @@ void Graphics::drawtowerbackground(const TowerBG& bg_obj)
     clear();
 
     const int offset = (int) lerp(-bg_obj.bscroll, 0);
+#ifdef GNW
+    /* updatetowerbackground() keeps texture line y = background line
+     * y + gnw_pos (back rows of 8 lines, 120 of them, looping); the frame
+     * shows the texture from line 8 + offset */
+    {
+        const int top = 8 + offset + bg_obj.gnw_pos;
+        const int r0 = (top >= 0) ? top / 8 : -((7 - top) / 8);
+        for (int r = r0; r * 8 - top < SCREEN_HEIGHT_PIXELS; r++)
+        {
+            for (int i = 0; i < 40; i++)
+            {
+                drawtile3(i * 8, r * 8 - top, map.tower.backat(i, r, 0), bg_obj.gnw_colstate);
+            }
+        }
+    }
+#else
     const SDL_Rect srcRect = {0, 8 + offset, SCREEN_WIDTH_PIXELS, SCREEN_HEIGHT_PIXELS};
 
     copy_texture(bg_obj.texture, &srcRect, NULL);
+#endif
 }
 
 void Graphics::updatetowerbackground(TowerBG& bg_obj)
 {
     if (bg_obj.bypos < 0) bg_obj.bypos += 120 * 8;
+
+#ifdef GNW
+    /* The texture after this update: a full redraw puts background line
+     * bypos + off at texture line 0 (off = bscroll when scrolling the other
+     * way); the partial update scrolls the texture by bscroll and draws
+     * the new lines from the same position. A new colour comes with a full
+     * redraw (tdrawback). */
+    if (bg_obj.tdrawback)
+    {
+        bg_obj.gnw_colstate = bg_obj.colstate;
+        bg_obj.tdrawback = false;
+    }
+    bg_obj.gnw_pos = bg_obj.bypos + (bg_obj.scrolldir == 0 ? 0 : bg_obj.bscroll);
+    return;
+#endif
 
     SDL_Texture* target = SDL_GetRenderTarget(gameScreen.m_renderer);
     set_render_target(bg_obj.texture);
@@ -3155,6 +3313,10 @@ SDL_Color Graphics::getcol( int t )
 
 void Graphics::menuoffrender(void)
 {
+#ifdef GNW
+    /* done by gnw_menu_begin() before the menu was drawn */
+    return;
+#endif
     if (copy_texture(gameplayTexture, NULL, NULL) != 0)
     {
         return;
@@ -3432,6 +3594,15 @@ void Graphics::flashlight(void)
 
 void Graphics::screenshake(void)
 {
+#ifdef GNW
+    /* the frame moves (black comes in), then flips in flip mode */
+    vv_sdl_screen_shift(screenshake_x, screenshake_y);
+    if (flipmode)
+    {
+        vv_sdl_screen_flip_vertical();
+    }
+    return;
+#endif
     if (gameScreen.badSignalEffect)
     {
         ApplyFilter(&tempFilterSrc, &tempFilterDest);
@@ -3530,6 +3701,14 @@ void Graphics::get_stretch_info(SDL_Rect* rect)
 
 void Graphics::render(void)
 {
+#ifdef GNW
+    /* the frame is the screen: only flip mode to do */
+    if (flipmode)
+    {
+        vv_sdl_screen_flip_vertical();
+    }
+    return;
+#endif
     ime_render();
     draw_screenshot_border();
 
@@ -3739,8 +3918,10 @@ bool Graphics::reloadresources(void)
 
     destroy();
 
+#ifndef GNW /* Hitest_frames() reads the sheets (grphx.im_*sprites_surf) */
     make_array(&grphx.im_sprites_surf, sprites_surf, 32);
     make_array(&grphx.im_flipsprites_surf, flipsprites_surf, 32);
+#endif
 
     images[IMAGE_LEVELCOMPLETE] = grphx.im_image0;
     images[IMAGE_MINIMAP] = grphx.im_image1;

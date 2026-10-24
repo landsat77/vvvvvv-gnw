@@ -123,6 +123,9 @@ void Screen::LoadIcon(void)
 #else
 void Screen::LoadIcon(void)
 {
+#ifdef GNW
+    return; /* no window icon */
+#endif
     SDL_Surface* icon = LoadImageSurface("VVVVVV.png");
     if (icon == NULL)
     {

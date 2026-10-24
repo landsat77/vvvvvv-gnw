@@ -1,3 +1,47 @@
+#ifdef GNW
+/* No right-to-left languages on the Game & Watch (no SheenBidi): the text
+ * is drawn as it is. */
+#include "FontBidi.h"
+
+namespace font
+{
+
+void bidi_init(void)
+{
+}
+
+void bidi_destroy(void)
+{
+}
+
+bool is_directional_character(const uint32_t codepoint)
+{
+    /* as below */
+    return (codepoint >= 0x200E && codepoint <= 0x200F) || (codepoint >= 0x202A && codepoint <= 0x202E)
+        || (codepoint >= 0x2066 && codepoint <= 0x2069);
+}
+
+bool is_joiner(const uint32_t codepoint)
+{
+    return codepoint == 0x200C || codepoint == 0x200D;
+}
+
+bool bidi_should_transform(const bool rtl, const char* text)
+{
+    (void) rtl;
+    (void) text;
+    return false;
+}
+
+const char* bidi_transform(const bool rtl, const char* text)
+{
+    (void) rtl;
+    return text;
+}
+
+} // namespace font
+
+#else /* GNW */
 #include "FontBidi.h"
 
 #include <SDL.h>
@@ -550,3 +594,5 @@ const char* bidi_transform(const bool rtl, const char* text)
 }
 
 } // namespace font
+
+#endif /* GNW */

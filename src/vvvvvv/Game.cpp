@@ -1,7 +1,9 @@
 #define GAME_DEFINITION
 #include "Game.h"
 
+#ifndef GNW
 #include <sstream>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <tinyxml2.h>

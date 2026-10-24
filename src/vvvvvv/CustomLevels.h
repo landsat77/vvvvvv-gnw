@@ -151,7 +151,13 @@ public:
     //Colouring stuff
     int getwarpbackground(int rx, int ry);
 
+#ifdef GNW
+    /* no player levels on the Game & Watch: 1 room (20 x 20 rooms of ints
+     * were 1.9 MB) */
+    static const int maxwidth = 1, maxheight = 1;
+#else
     static const int maxwidth = 20, maxheight = 20; //Special; the physical max the engine allows
+#endif
     static const int numrooms = maxwidth * maxheight;
     int contents[40 * 30 * numrooms];
     int numtrinkets(void);

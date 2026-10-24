@@ -1,7 +1,9 @@
 #define CL_DEFINITION
 #include "CustomLevels.h"
 
+#ifndef GNW
 #include <physfs.h>
+#endif
 #include <stdio.h>
 #include <string>
 #include <tinyxml2.h>
@@ -253,6 +255,7 @@ static void levelMetaDataCallback(const char* filename)
 
 static void unloadZips(void)
 {
+#ifndef GNW /* no level zips */
     char** list = PHYSFS_getSearchPath();
     if (list == NULL)
     {
@@ -266,6 +269,7 @@ static void unloadZips(void)
         }
     }
     PHYSFS_freeList(list);
+#endif
 }
 
 void customlevelclass::getDirectoryData(void)

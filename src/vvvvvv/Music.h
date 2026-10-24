@@ -117,8 +117,10 @@ public:
     bool mmmmmm;
     bool usingmmmmmm;
 
+#ifndef GNW /* the songs are separate files of the pack (vv_music_game.cpp) */
     binaryBlob pppppp_blob;
     binaryBlob mmmmmm_blob;
+#endif
     int num_pppppp_tracks;
     int num_mmmmmm_tracks;
 };

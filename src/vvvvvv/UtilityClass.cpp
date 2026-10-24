@@ -2,7 +2,9 @@
 #include "UtilityClass.h"
 
 #include <SDL.h>
+#ifndef GNW
 #include <sstream>
+#endif
 
 #include "Constants.h"
 #include "Localization.h"
@@ -110,9 +112,16 @@ glow(0),
 
 std::string UtilityClass::String( int _v )
 {
+#ifdef GNW
+    /* no iostreams on the Game & Watch (locales: too big) */
+    char buf[16];
+    SDL_snprintf(buf, sizeof(buf), "%d", _v);
+    return std::string(buf);
+#else
     std::ostringstream os;
     os << _v;
     return(os.str());
+#endif
 }
 
 int UtilityClass::Int(const char* str, int fallback /*= 0*/)

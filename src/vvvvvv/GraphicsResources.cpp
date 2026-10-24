@@ -12,6 +12,90 @@
 #include "Screen.h"
 #include "XMLUtils.h"
 
+#ifdef GNW
+/* The pictures are 8 bit images in the pack (tools/vv_render.c), used in
+ * place from the flash: no decoding, no copy (vv_sdl.c). */
+#include "vv_platform.h"
+#include "vv_sdl.h"
+
+static bool find_image(const char* filename, const uint8_t** data, uint32_t* size)
+{
+    if (!vv_plat_find_file(filename, data, size))
+    {
+        vlog_error("Image not found: %s", filename);
+        return false;
+    }
+    return true;
+}
+
+SDL_Surface* LoadImageSurface(const char* filename)
+{
+    const uint8_t* data;
+    uint32_t size;
+    if (!find_image(filename, &data, &size))
+    {
+        return NULL;
+    }
+    return vv_sdl_image_surface(data, size);
+}
+
+static int gnw_load(const TextureLoadType loadtype)
+{
+    switch (loadtype)
+    {
+    case TEX_WHITE:
+        return VV_SDL_LOAD_WHITE;
+    case TEX_GRAYSCALE:
+        return VV_SDL_LOAD_GRAYSCALE;
+    default:
+        return VV_SDL_LOAD_COLOR;
+    }
+}
+
+SDL_Texture* LoadImage(const char* filename, const TextureLoadType loadtype)
+{
+    const uint8_t* data;
+    uint32_t size;
+    if (!find_image(filename, &data, &size))
+    {
+        return NULL;
+    }
+    return vv_sdl_image_texture(data, size, gnw_load(loadtype));
+}
+
+static SDL_Texture* LoadImage(const char* filename)
+{
+    return LoadImage(filename, TEX_COLOR);
+}
+
+static void LoadVariants(const char* filename, SDL_Texture** colored, SDL_Texture** white, SDL_Texture** grayscale)
+{
+    if (colored != NULL)
+    {
+        *colored = LoadImage(filename, TEX_COLOR);
+    }
+    if (white != NULL)
+    {
+        *white = LoadImage(filename, TEX_WHITE);
+    }
+    if (grayscale != NULL)
+    {
+        *grayscale = LoadImage(filename, TEX_GRAYSCALE);
+    }
+}
+
+static void LoadSprites(const char* filename, SDL_Texture** texture, SDL_Surface** surface)
+{
+    *surface = LoadImageSurface(filename);
+    *texture = LoadImage(filename, TEX_WHITE);
+}
+
+/* translated sprites: not on the Game & Watch (English only) */
+static void LoadSpritesTranslation(const char*, tinyxml2::XMLDocument*, SDL_Surface*, SDL_Texture**)
+{
+}
+
+#else /* GNW */
 // Used to load PNG data
 extern "C"
 {
@@ -348,8 +432,16 @@ static void LoadSpritesTranslation(
     VVV_freefunc(SDL_FreeSurface, working);
 }
 
+#endif /* GNW */
+
 void GraphicsResources::init_translations(void)
 {
+#ifdef GNW
+    /* English sprites only */
+    im_sprites_translated = NULL;
+    im_flipsprites_translated = NULL;
+    return;
+#endif
     VVV_freefunc(SDL_DestroyTexture, im_sprites_translated);
     VVV_freefunc(SDL_DestroyTexture, im_flipsprites_translated);
 
@@ -482,6 +574,17 @@ void GraphicsResources::destroy(void)
     VVV_freefunc(SDL_FreeSurface, im_flipsprites_surf);
 }
 
+#ifdef GNW
+bool SaveImage(const SDL_Surface* surface, const char* filename)
+{
+    return false;
+}
+
+bool SaveScreenshot(void)
+{
+    return false;
+}
+#else
 bool SaveImage(const SDL_Surface* surface, const char* filename)
 {
     unsigned char* out;
@@ -574,3 +677,4 @@ bool SaveScreenshot(void)
     vlog_info("Saved screenshot %s", name);
     return true;
 }
+#endif /* GNW */

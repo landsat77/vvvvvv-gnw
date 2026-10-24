@@ -169,6 +169,9 @@ void BUTTONGLYPHS_init(void)
 
 bool BUTTONGLYPHS_keyboard_is_available(void)
 {
+#ifdef GNW
+    return false; /* the buttons of the Game & Watch */
+#endif
     /* Returns true if it makes sense to show button hints that are only available
      * on keyboards (like press M to mute), false if we're on a console. */
 
@@ -187,6 +190,9 @@ bool BUTTONGLYPHS_keyboard_is_available(void)
 
 bool BUTTONGLYPHS_keyboard_is_active(void)
 {
+#ifdef GNW
+    return false;
+#endif
     /* Returns true if, not only do we have a keyboard available, but it's also the
      * active input method. (So, show keyboard keys, if false, show controller glyphs) */
     return keyboard_is_active;
@@ -307,6 +313,33 @@ const char* BUTTONGLYPHS_get_button(const ActionSet actionset, const Action acti
      * If binding >= 0, select a specific CONTROLLER binding glyph,
      * or NULL if the index is higher than the max binding index. */
 
+#ifdef GNW
+    /* the buttons of the console (vv_core.cpp) */
+    if (binding > 0)
+    {
+        return NULL;
+    }
+    switch (actionset)
+    {
+    case ActionSet_Menu:
+        return "A";
+    case ActionSet_InGame:
+        switch (action.InGame)
+        {
+        case Action_InGame_ACTION:
+            return "A";
+        case Action_InGame_Interact:
+        case Action_InGame_Map:
+            return "TIME";
+        case Action_InGame_Esc:
+            return "GAME";
+        case Action_InGame_Restart:
+            return "-";
+        }
+        break;
+    }
+    return "?";
+#endif
     bool show_controller = binding >= 0 || !BUTTONGLYPHS_keyboard_is_active();
     if (binding < 0)
     {

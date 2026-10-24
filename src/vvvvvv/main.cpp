@@ -175,6 +175,7 @@ static const inline struct ImplFunc* get_gamestate_funcs(
         {Func_fixed, gamecompletelogic2},
     FUNC_LIST_END
 
+#ifndef GNW /* no level editor on the Game & Watch */
     FUNC_LIST_BEGIN(EDITORMODE)
         {Func_fixed, flipmodeoff},
         {Func_input, editorinput},
@@ -182,6 +183,7 @@ static const inline struct ImplFunc* get_gamestate_funcs(
         {Func_fixed, editorrenderfixed},
         {Func_delta, editorrender},
     FUNC_LIST_END
+#endif
 
     FUNC_LIST_BEGIN(PRELOADER)
         {Func_input, preloaderinput},
@@ -380,7 +382,26 @@ static void keep_console_open(const bool open_console)
     while (c != '\n' && c != EOF);
 }
 
+#ifdef GNW
+#include <setjmp.h>
+#include "vv_core.h"
+
+/* After a savestate is loaded (vv_state.cpp): the loop starts again from
+ * the game state it set. */
+static void gnw_restart_loop(void)
+{
+    gamestate_funcs = get_gamestate_funcs(game.gamestate, &num_gamestate_funcs);
+    gamestate_func_index = -1;
+    active_funcs = NULL;
+    meta_func_index = 0;
+    accumulator = 0;
+    loop_assign_active_funcs();
+}
+
+int vv_game_main(int argc, char *argv[])
+#else
 int main(int argc, char *argv[])
+#endif
 {
     char* baseDir = NULL;
     char* assetsPath = NULL;
@@ -862,8 +883,23 @@ int main(int argc, char *argv[])
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(emscriptenloop, 0, 0);
 #else
+#ifdef GNW
+    if (setjmp(vv_core_restart_point) != 0)
+    {
+        /* a savestate was loaded (vv_core_poll_restart) */
+        vv_core_apply_pending_load();
+        gnw_restart_loop();
+        f_timePrev = time_ = SDL_GetTicks64();
+    }
+    vv_core_loop_ready();
+#endif
     while (true)
     {
+#ifdef GNW
+        /* 30 frames per second, no interpolated frames in between (the
+         * option is hidden) */
+        game.over30mode = false;
+#endif
         f_time = SDL_GetTicks64();
 
         const Uint64 f_timetaken = f_time - f_timePrev;
@@ -913,8 +949,18 @@ static void cleanup(void)
 
 SDL_NORETURN void VVV_exit(const int exit_code)
 {
+#ifdef GNW
+    /* back to the launcher (after saving the settings, like cleanup()) */
+    if (exit_code == 0)
+    {
+        game.savestatsandsettings();
+        vv_plat_quit();
+    }
+    vv_plat_fatal("the game stopped (see the log)");
+#else
     cleanup();
     exit(exit_code);
+#endif
 }
 
 static void inline deltaloop(void)

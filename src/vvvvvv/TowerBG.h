@@ -14,6 +14,12 @@ struct TowerBG
     int r;
     int g;
     int b;
+#ifdef GNW
+    /* what the texture would hold (Graphics.cpp draws it every frame):
+     * the tower background from this position, in these colours */
+    int gnw_pos;
+    int gnw_colstate;
+#endif
 };
 
 #endif /* TOWERBG_H */

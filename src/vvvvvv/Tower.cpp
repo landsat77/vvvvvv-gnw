@@ -10,6 +10,11 @@
 towerclass::towerclass(void)
 {
     minitowermode = false;
+#ifdef GNW
+    back = NULL;
+    contents = NULL;
+    minitower = NULL;
+#else
     //We create a blank map
     SDL_memset(contents, 0, sizeof(contents));
     SDL_memset(back, 0, sizeof(back));
@@ -17,10 +22,14 @@ towerclass::towerclass(void)
 
     loadbackground();
     loadmap();
+#endif
 }
 
 int towerclass::backat(int xp, int yp, int yoff)
 {
+#ifdef GNW
+    if (back == NULL) loadbackground();
+#endif
     yp = (yp*8 + yoff) / 8;
 
     if (xp >= 0 && xp < 40)
@@ -39,6 +48,9 @@ int towerclass::at(int xp, int yp, int yoff)
     }
     else
     {
+#ifdef GNW
+        if (contents == NULL) loadmap();
+#endif
         yp = (yp*8 + yoff) / 8;
 
         yp = POS_MOD(yp, 700);
@@ -60,6 +72,9 @@ int towerclass::at(int xp, int yp, int yoff)
 
 int towerclass::miniat(int xp, int yp, int yoff)
 {
+#ifdef GNW
+    if (minitower == NULL) return 0;
+#endif
     yp = (yp*8 + yoff) / 8;
 
     yp = POS_MOD(yp, 100);
@@ -185,7 +200,11 @@ void towerclass::loadminitower1(void)
     12,12,12,12,12,12,12,12,21,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,20,12,12,12,12,12,
     };
 
+#ifdef GNW
+    minitower = tmap;
+#else
     SDL_memcpy(minitower, tmap, sizeof(minitower));
+#endif
 #endif
 }
 
@@ -295,7 +314,11 @@ void towerclass::loadminitower2(void)
     12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,21,28,28,0,0,0,0,0,0,0,0,0,20,12,12,12,12,12,
     };
 
+#ifdef GNW
+    minitower = tmap;
+#else
     SDL_memcpy(minitower, tmap, sizeof(minitower));
+#endif
 #endif
 }
 
@@ -425,7 +448,11 @@ void towerclass::loadbackground(void)
     1,1,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,1,2,0,0,3,1,1,2,3,1,1,2,0,0,0,0,
     1,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,1,2,0,0,0,0,3,2,0,0,3,2,0,0,0,0,0,
     };
+#ifdef GNW
+    back = tmap;
+#else
     SDL_memcpy(back, tmap, sizeof(back));
+#endif
 }
 
 void towerclass::loadmap(void)
@@ -1135,6 +1162,10 @@ void towerclass::loadmap(void)
     12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,
     };
 
+#ifdef GNW
+    contents = tmap;
+#else
     SDL_memcpy(contents, tmap, sizeof(contents));
+#endif
 #endif
 }
