@@ -7,6 +7,30 @@ section as the GitHub Release notes.
 
 ## [Unreleased]
 
+## [v1.0.1] - 2026-10-25
+
+### Added
+
+- Cover art in the launcher.
+- Choice of the music when the pack is made (`vv_pack.py --music`, asked by
+  the script when not given): `ogg` keeps the original Ogg Vorbis songs,
+  decoded by the console (~66 MB pack: needs an external flash bigger than
+  64 MB), `32000` (default, ~44 MB), `22050` (~31 MB), `11025` (~17 MB),
+  `none` (~3.5 MB). The sound effects follow the output rate (44.1, 32 or
+  22 kHz).
+
+### Changed
+
+- The output rate comes from the pack; `--music-rate` and `--no-music`
+  are replaced by `--music` (`--no-music` still works).
+- The copy of the screen behind the sliding menus is kept in DTCM (frees
+  75 KB of heap).
+
+### Note
+
+- A pack made for v1.0.0 still works; make it again only to change the
+  music.
+
 ## [v1.0.0] - 2026-10-25
 
 ### Added
@@ -17,12 +41,8 @@ section as the GitHub Release notes.
   written for the console (software renderer straight into the LCD).
 - Game data from a `.vvv` pack next to the `.bin`, used in place from the
   external flash (`vv_pack.py`, with `vv_render` for Windows, macOS and
-  Linux): 8 bit pictures, the rooms and scripts of the game
-  (`vv_levels.bin`), the music chosen when the pack is made (`--music`,
-  asked by the script): the original Ogg Vorbis songs decoded by the console
-  (~66 MB), or IMA ADPCM mono at 32 kHz (~44 MB, default), 22 kHz or
-  11 kHz; the sound effects at the output rate (44.1, 32 or 22 kHz).
-- Cover art in the launcher.
+  Linux): 8 bit pictures, the songs in IMA ADPCM mono 32 kHz (or 16 kHz),
+  the rooms and scripts of the game (`vv_levels.bin`). About 44 MB.
 - Savestates at the player's position (not during cutscenes), resume from
   the launcher.
 - Pause menu options: music, sound effects, swap A/B.
