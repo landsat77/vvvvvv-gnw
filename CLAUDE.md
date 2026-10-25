@@ -27,15 +27,16 @@ SDK's generic porting guide (memory map, audio, ABI).
   the tables go to vv_levels.bin (in the pack, read in place; its FNV hash
   is checked against vv_levels_gen.h at start). The release ships
   vv_levels.bin next to vv_pack.py. Tower contents/back/minitower are
-  pointers into it (Tower.h). Text ~400 KB, BSS ~90 KB, heap ~250 KB
-  (peak ~70 KB + 75 KB while a menu slides, see below).
+  pointers into it (Tower.h). Text ~410 KB, BSS ~90 KB, heap ~230 KB
+  (peak ~70 KB, ~195 KB with the Ogg Vorbis arena).
 - libstdc++ (std::string/vector/map): libstdc++_nano.a of the toolchain,
   copied with `objcopy --redefine-syms` (its memcpy/malloc/... -> core_*)
   to build/homebrew/libgnwstdcxx.a. No <sstream> (UtilityClass::String uses
   snprintf: iostreams pull locales). operator new = vv heap (vv_cxx.cpp).
   vv_libc.c: atexit (no-op), putchar (built with -fno-builtin-printf, else
   GCC makes printf("%c") a putchar call: endless recursion, stack fault),
-  strnlen, fmodf.
+  strnlen, fmodf, sin, cos, ldexp, log, exp (stb_vorbis setup; built with
+  -fno-builtin-* for them).
 - Heap: vv_alloc.c over all of RAM_EMU after the BSS, made by a
   constructor(101) in vv_main.c (the game's global C++ objects allocate in
   their constructors, before app_main). The harness does the same.
@@ -52,8 +53,9 @@ SDK's generic porting guide (memory map, audio, ABI).
   scrolldir != 0) and gnw_colstate recorded by updatetowerbackground).
   render(): flip mode = flip the frame in place; screenshake(): shift then
   flip. Menus sliding over the game (maprender / teleporterrender):
-  vv_core_menu_begin() copies the shown frame (RGB332, 75 KB heap, freed by
-  the next gamerender) and draws the menu moved down (vv_sdl_set_offset).
+  vv_core_menu_begin() copies the shown frame (RGB332, 75 KB in DTCM via
+  vv_plat_alloc_static, taken at the first menu and kept) and draws the
+  menu moved down (vv_sdl_set_offset).
   Per-pixel sprite collisions read sprites.png in place
   (Graphics::Hitest_frames). Font glyph pages: 256 glyphs in 32 slots
   (Font.cpp; 4096-glyph pages were 98 KB).
@@ -65,10 +67,16 @@ SDK's generic porting guide (memory map, audio, ABI).
   Greyed out (Game.cpp, positions kept): levels, graphics, game pad,
   language.
 - Sound (vv_music_game.cpp): musicclass of Music.cpp (fades, areamap)
-  over GWMU samples: music/<song>.mus (ADPCM, 32 or 16 kHz, loops from 0,
-  PATHCOMPLETE/PLENARY once), sounds/<name>.wav (PCM 32 kHz, once), 8
-  channels, mixed at VV_SAMPLE_RATE = 32000 into the firmware's PCM ring
-  (2048 samples ahead). Options music/sound in the mixer.
+  over the pack's songs: music/<song>.mus (GWMU ADPCM 32000 / 22050 /
+  11025 Hz, loops from 0, PATHCOMPLETE/PLENARY once) or music/<song>.ogg
+  (--music ogg: the original files, vv_ogg.c = stb_vorbis with
+  DIVIDES_IN_CODEBOOK + FAST_HUFFMAN_LENGTH 8 + SHORT, in a 128 KB arena
+  taken once from the heap (125 KB needed by the 224 kbps songs, no alloca
+  on the stack), stereo averaged; ~10 % CPU in gwemu), sounds/<name>.wav
+  (GWMU PCM, once), 8 channels. Output rate = the rate of the pack's
+  sounds (vv_core_audio_rate: 44100 for ogg, 32000, 22050 for 22 / 11 kHz
+  songs: 11 kHz uses the exact 2x filter), odroid_audio_init() after the
+  pack is open, DMA half = rate / 60, ring 2048 samples ahead.
 - vv_render (tools/render, stb_image + stb_vorbis): PNG -> GWIM, OGG ->
   mono, polyphase windowed sinc 44100 -> 32000, IMA ADPCM; WAV -> PCM.
   -ffp-contract=off: zig musl and gcc builds give byte identical packs.

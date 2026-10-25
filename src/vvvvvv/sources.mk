@@ -27,4 +27,4 @@ VV_THIRD_PARTY = tinyxml2/tinyxml2.cpp c-hashmap/map.c
 
 # the port, built with the game (C++ / C)
 VV_PORT_CXX = vv_stubs.cpp vv_core.cpp vv_state.cpp vv_fs.cpp vv_music_game.cpp vv_levels.cpp vv_cxx.cpp
-VV_PORT_C = vv_sdl.c vv_alloc.c vv_pack.c vv_music.c
+VV_PORT_C = vv_sdl.c vv_alloc.c vv_pack.c vv_music.c vv_ogg.c

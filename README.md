@@ -26,6 +26,8 @@ See [INSTALL.md](INSTALL.md) (English and French). In short:
    python3 vv_pack.py VVVVVV.vvv /path/to/data.zip
    ```
 
+   It asks which music to put in the pack (or `--music ogg|32000|22050|11025|none`).
+
    On Windows: `py vv_pack.py VVVVVV.vvv "C:\Program Files (x86)\Steam\steamapps\common\VVVVVV\data.zip"`
 
 2. Copy both files to the SD card, side by side, with the same name:
@@ -45,18 +47,23 @@ files are converted for it on your computer by `vv_render` (shipped for
 Windows, macOS and Linux in `vv_render/` next to the script):
 
 - the pictures to 8 bit images with a palette;
-- the 16 songs (Ogg Vorbis, stereo, 44.1 kHz: 62 MB) and the sound effects
-  to mono samples (the console has one speaker), the songs in IMA ADPCM.
+- the 16 songs (Ogg Vorbis, stereo, 44.1 kHz: 62 MB) to mono IMA ADPCM
+  (the console has one speaker), or kept as they are (`--music ogg`: the
+  console decodes them while they play);
+- the sound effects to mono samples at the console's output rate (44.1 kHz
+  with the original songs, else 32 or 22 kHz).
 
 The pack also gets `vv_levels.bin`, the rooms and the scripts of the game
 (taken out of its source code: on the console the code runs from RAM), and
 the font of VVVVVV 2.4.
 
-| Option | Pack size | Music |
+| `--music` | Pack size | Music |
 |---|---|---|
-| *(default)* | ~44 MB | IMA ADPCM, 32 kHz |
-| `--music-rate 16000` | ~24 MB | IMA ADPCM, 16 kHz |
-| `--no-music` | ~3.5 MB | none |
+| `ogg` | ~66 MB | the original Ogg Vorbis songs, not converted: best sound, ~10 % of the CPU and 128 KB of RAM to decode them. **Bigger than the free external flash of a 64 MB console.** |
+| `32000` *(default)* | ~44 MB | IMA ADPCM mono, 32 kHz |
+| `22050` | ~31 MB | IMA ADPCM mono, 22 kHz |
+| `11025` | ~17 MB | IMA ADPCM mono, 11 kHz |
+| `none` | ~3.5 MB | no music |
 
 ## Controls
 
@@ -127,7 +134,7 @@ read-only, like the flash.
 | `src/vvvvvv/` | VVVVVV 2.4.2 (`desktop_version/src` @ 149f5fb). Game & Watch changes are under `#ifdef GNW`. |
 | `tools/gen_levels.py` | Takes the room / script tables out of 8 source files at build time: `vv_levels.bin` + the sources without them. |
 | `src/port/sdl/`, `vv_sdl.c` | The small SDL 2: a software renderer drawing straight into the LCD, images in place from the pack, keys from the buttons. |
-| `src/port/vv_music_game.cpp`, `vv_music.c` | Music.cpp of the port: songs and sound effects from the pack, mixed at 32 kHz. |
+| `src/port/vv_music_game.cpp`, `vv_music.c`, `vv_ogg.c` | Music.cpp of the port: songs (ADPCM, or Ogg Vorbis decoded by stb_vorbis) and sound effects from the pack, mixed at the pack's rate. |
 | `src/port/vv_fs.cpp` | FileSystemUtils.cpp of the port: assets in the pack, saves on the SD card. |
 | `src/port/vv_core.cpp`, `vv_state.cpp` | The game run for the platform, buttons → keys, savestates. |
 | `src/port/vv_main.c` | Retro-Go side: entry point, display, audio, buttons, pause menu. |

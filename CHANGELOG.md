@@ -17,8 +17,12 @@ section as the GitHub Release notes.
   written for the console (software renderer straight into the LCD).
 - Game data from a `.vvv` pack next to the `.bin`, used in place from the
   external flash (`vv_pack.py`, with `vv_render` for Windows, macOS and
-  Linux): 8 bit pictures, the songs in IMA ADPCM mono 32 kHz (or 16 kHz),
-  the rooms and scripts of the game (`vv_levels.bin`). About 44 MB.
+  Linux): 8 bit pictures, the rooms and scripts of the game
+  (`vv_levels.bin`), the music chosen when the pack is made (`--music`,
+  asked by the script): the original Ogg Vorbis songs decoded by the console
+  (~66 MB), or IMA ADPCM mono at 32 kHz (~44 MB, default), 22 kHz or
+  11 kHz; the sound effects at the output rate (44.1, 32 or 22 kHz).
+- Cover art in the launcher.
 - Savestates at the player's position (not during cutscenes), resume from
   the launcher.
 - Pause menu options: music, sound effects, swap A/B.

@@ -19,9 +19,10 @@ extern "C" {
 #define VV_WIDTH  320
 #define VV_HEIGHT 240
 
-/* Output sample rate of the port (mono, signed 16 bit). The music and the
- * sound effects of the pack are stored at this rate (vv_pack.py). */
-#define VV_SAMPLE_RATE 32000
+/* Output sample rate (mono, signed 16 bit): the rate of the pack's sound
+ * effects (vv_pack.py: 44100 with the original Ogg Vorbis songs, 32000 or
+ * 22050 with converted songs), vv_core_audio_rate(). */
+#define VV_SAMPLE_RATE vv_core_audio_rate()
 
 /* Buttons of the console, as seen by the core (vv_core_set_buttons()) */
 enum {
@@ -69,6 +70,10 @@ const char *vv_plat_pack_name(uint32_t index);
  * (settings.vvv, unlock.vvv, saves). */
 const char *vv_plat_save_dir(void);
 
+/* `size` bytes outside the game heap for good (the copy of the game
+ * behind the menus: DTCM on the console), NULL: use the heap. */
+void *vv_plat_alloc_static(size_t size);
+
 /* Unrecoverable error. Never returns. */
 void vv_plat_fatal(const char *msg) __attribute__((noreturn));
 
@@ -99,6 +104,9 @@ void vv_core_poll_restart(void);
 
 /* Options of the pause menu */
 void vv_core_set_sound(bool music, bool sound);
+
+/* Output sample rate of the pack's sounds (the pack must be open). */
+int vv_core_audio_rate(void);
 
 /* Render `frames` mono samples (sound effects and music). */
 void vv_core_audio_render(int16_t *out, int frames);

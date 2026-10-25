@@ -25,6 +25,7 @@
 
 #include "vv_platform.h"
 #include "vv_music.h"
+#include "vv_ogg.h"
 
 #define VVV_MAX_VOLUME 128
 #define VVV_MAX_CHANNELS 8
@@ -52,12 +53,14 @@ struct Sample
 {
     const uint8_t* data;
     uint32_t size;
+    bool ogg;                   /* the original Ogg Vorbis file (else GWMU) */
 };
 static Sample songs[NUM_SONGS];
 static Sample sounds[NUM_SOUNDS];
 
 /* the song playing (MusicTrack of Music.cpp) */
-static vv_mus_t* song;          /* NULL: halted */
+static vv_mus_t* song;          /* NULL: halted (GWMU songs) */
+static vv_ogg_t* song_ogg;      /* the same for an Ogg Vorbis song */
 static bool song_loops;
 static bool song_paused = true;
 static uint32_t song_left;      /* frames before the end of a song that does not loop */
@@ -78,10 +81,12 @@ static bool opt_music = true, opt_sound = true;
 
 static void song_halt(void)
 {
-    if (song != NULL)
+    if (song != NULL || song_ogg != NULL)
     {
         vv_mus_close(song);
         song = NULL;
+        vv_ogg_close(song_ogg);
+        song_ogg = NULL;
         song_paused = true;
     }
 }
@@ -93,20 +98,33 @@ static bool song_play(int t, bool loop)
     {
         return false;
     }
-    song = vv_mus_open(songs[t].data, (int) songs[t].size);
-    if (song == NULL)
+    if (songs[t].ogg)
     {
-        return false;
+        song_ogg = vv_ogg_open(songs[t].data, songs[t].size);
+        if (song_ogg == NULL)
+        {
+            vlog_error("Cannot play %s (out of memory?)", song_names[t]);
+            return false;
+        }
+        song_left = 0;
+    }
+    else
+    {
+        song = vv_mus_open(songs[t].data, (int) songs[t].size);
+        if (song == NULL)
+        {
+            return false;
+        }
+        song_left = vv_mus_length(song, VV_SAMPLE_RATE);
     }
     song_loops = loop;
-    song_left = vv_mus_length(song, VV_SAMPLE_RATE);
     song_paused = false;
     return true;
 }
 
 static bool song_is_paused(void)
 {
-    return song_paused || song == NULL;
+    return song_paused || (song == NULL && song_ogg == NULL);
 }
 
 static void sound_play(int t)
@@ -130,6 +148,27 @@ static void sound_stop(Channel* c)
 {
     vv_mus_close(c->mus);
     c->mus = NULL;
+}
+
+/* the rate of the pack's sound effects (vv_render: GWMU, rate at 8) */
+int vv_core_audio_rate(void)
+{
+    static int rate;
+    if (rate == 0)
+    {
+        const uint8_t* data;
+        uint32_t size;
+        rate = 32000;
+        if (vv_plat_find_file("sounds/jump.wav", &data, &size) && size >= 12 && memcmp(data, "GWMU", 4) == 0)
+        {
+            const int r = data[8] | (data[9] << 8) | (data[10] << 16) | (data[11] << 24);
+            if (r >= 8000 && r <= 48000)
+            {
+                rate = r;
+            }
+        }
+    }
+    return rate;
 }
 
 void vv_core_set_sound(bool music_on, bool sound_on)
@@ -158,7 +197,32 @@ void vv_core_audio_render(int16_t* out, int frames)
         int n = frames < CHUNK ? frames : CHUNK;
         memset(acc, 0, sizeof(acc));
 
-        if (song != NULL && !song_paused)
+        if (song_ogg != NULL && !song_paused)
+        {
+            int m = 0;
+            int rewinds = 0;
+            while (m < n)
+            {
+                const int got = vv_ogg_read(song_ogg, tmp + m, n - m);
+                if (got > 0)
+                {
+                    m += got;
+                    continue;
+                }
+                /* the end: again from the start (once per chunk: an
+                 * empty song stops), or silence for a song that ends */
+                if (!song_loops || rewinds++ > 0)
+                {
+                    break;
+                }
+                vv_ogg_rewind(song_ogg);
+            }
+            if (m > 0 && opt_music && !game.muted && !game.musicmuted)
+            {
+                add_scaled(acc, tmp, m, song_volume * music.user_music_volume / USER_VOLUME_MAX * 2);
+            }
+        }
+        else if (song != NULL && !song_paused)
         {
             int m = n;
             if (!song_loops && (uint32_t) m > song_left)
@@ -254,7 +318,14 @@ void musicclass::init(void)
     for (int i = 0; i < NUM_SONGS; i++)
     {
         SDL_snprintf(name, sizeof(name), "music/%s.mus", song_names[i]);
-        if (vv_plat_find_file(name, &songs[i].data, &songs[i].size))
+        songs[i].ogg = false;
+        if (!vv_plat_find_file(name, &songs[i].data, &songs[i].size))
+        {
+            /* vv_pack.py --music ogg: the original files */
+            SDL_snprintf(name, sizeof(name), "music/%s.ogg", song_names[i]);
+            songs[i].ogg = vv_plat_find_file(name, &songs[i].data, &songs[i].size);
+        }
+        if (songs[i].data != NULL)
         {
             num_pppppp_tracks = i + 1;
         }

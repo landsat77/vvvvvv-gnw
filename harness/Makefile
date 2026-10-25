@@ -73,6 +73,10 @@ $(BUILD_DIR)/p_%.o: $(PORT)/%.cpp | $(BUILD_DIR)
 $(BUILD_DIR)/p_%.o: $(PORT)/%.c | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) $< -o $@
 
+# stb_vorbis allocates from the game heap, like on the console
+$(BUILD_DIR)/p_vv_ogg.o: $(PORT)/vv_ogg.c | $(BUILD_DIR)
+	$(CC) -c $(CFLAGS) $(GLUE) -w $< -o $@
+
 $(BUILD_DIR)/p_vv_host.o: vv_host.c | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) $< -o $@
 

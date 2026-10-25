@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """Build the game data pack of the VVVVVV homebrew.
 
-    python3 vv_pack.py VVVVVV.vvv /path/to/data.zip
+    python3 vv_pack.py VVVVVV.vvv /path/to/data.zip [--music CHOICE]
+
+CHOICE: the music in the pack (asked when the option is not given):
+    ogg    the original songs, not converted (Ogg Vorbis 44.1 kHz, decoded by
+           the console while they play): best sound, pack of ~66 MB
+    32000  converted to IMA ADPCM mono 32 kHz (default): ~44 MB
+    22050  converted to IMA ADPCM mono 22 kHz: ~31 MB
+    11025  converted to IMA ADPCM mono 11 kHz: ~17 MB
+    none   no music: ~3.5 MB
 
 data.zip is the data file of VVVVVV 2.x (the full game: Steam, GOG,
 itch.io... next to the game's executable; on macOS inside VVVVVV.app,
@@ -11,9 +19,11 @@ The console reads the pack in place from its external flash, so the files
 are converted for it on this computer (by vv_render: vv_render/ next to this
 script, or tools/bin of the repository):
   - the pictures (graphics/*.png) to 8 bit images with a palette;
-  - the 16 songs of vvvvvvmusic.vvv (Ogg Vorbis, stereo, 44.1 kHz) and the
-    sound effects (sounds/*.wav) to mono samples at the console's rate
-    (one speaker), the songs in IMA ADPCM;
+  - the 16 songs of vvvvvvmusic.vvv (Ogg Vorbis, stereo, 44.1 kHz) to mono
+    samples in IMA ADPCM (the console has one speaker), unless --music ogg;
+  - the sound effects (sounds/*.wav) to mono samples at the console's
+    output rate (44.1 kHz with the original songs, 32 kHz, 22 kHz with the
+    22 and 11 kHz songs);
 and the pack gets the files of this release: vv_levels.bin (the rooms and
 scripts of the game, taken out of its code), font.png / font.fontmeta (the
 font of VVVVVV 2.4).
@@ -33,7 +43,37 @@ import zipfile
 
 MAGIC = b"GWVV01\0\0"
 ENTRY_NAME_LEN = 40
-MUSIC_RATES = (32000, 16000)
+# --music: (rate of the songs (None: the original Ogg Vorbis files), output
+# rate of the console = rate of the sound effects, menu text)
+MUSIC_CHOICES = {
+    "ogg": (None, 44100, "original Ogg Vorbis songs, not converted (best sound, ~66 MB)"),
+    "32000": (32000, 32000, "IMA ADPCM mono 32 kHz (~44 MB)"),
+    "22050": (22050, 22050, "IMA ADPCM mono 22 kHz (~31 MB)"),
+    "11025": (11025, 22050, "IMA ADPCM mono 11 kHz (~17 MB)"),
+    "none": (None, 32000, "no music (~3.5 MB)"),
+}
+MUSIC_ORDER = ["ogg", "32000", "22050", "11025", "none"]
+DEFAULT_MUSIC = "32000"
+# the external flash of the console must hold the pack (and the firmware)
+FLASH_WARNING_BYTES = 55 * 1000 * 1000
+
+
+def ask_music():
+    """The music choice, asked on the terminal."""
+    print("Music of the pack:")
+    for i, key in enumerate(MUSIC_ORDER, 1):
+        print("  %d. %s%s" % (i, MUSIC_CHOICES[key][2], "  [default]" if key == DEFAULT_MUSIC else ""))
+    while True:
+        try:
+            answer = input("Choice (1-%d, Enter = %d): " % (len(MUSIC_ORDER), MUSIC_ORDER.index(DEFAULT_MUSIC) + 1)).strip()
+        except EOFError:
+            return DEFAULT_MUSIC
+        if not answer:
+            return DEFAULT_MUSIC
+        if answer.isdigit() and 1 <= int(answer) <= len(MUSIC_ORDER):
+            return MUSIC_ORDER[int(answer) - 1]
+        if answer in MUSIC_CHOICES:
+            return answer
 
 # the songs, in the order of vvvvvvmusic.vvv (Music.h: Music_PATHCOMPLETE...)
 SONGS = [
@@ -200,14 +240,22 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("output", help="pack to write (same name as the .bin, extension .vvv)")
     ap.add_argument("data", help="data.zip of VVVVVV 2.x (or the folder it was unzipped to)")
-    ap.add_argument("--music-rate", type=int, choices=MUSIC_RATES, default=32000,
-                    help="rate of the music: 32000 (default, ~40 MB) or 16000 (~20 MB)")
-    ap.add_argument("--no-music", action="store_true", help="no music (pack of ~3.5 MB)")
+    ap.add_argument("--music", choices=MUSIC_ORDER,
+                    help="music of the pack: ogg (original files, ~66 MB), 32000 (default, ~44 MB), "
+                         "22050 (~31 MB), 11025 (~17 MB) or none (~3.5 MB); asked when not given")
+    ap.add_argument("--no-music", action="store_true", help="same as --music none")
     ap.add_argument("--renderer", help="vv_render program (vv_render/ next to this script by default)")
     ap.add_argument("--levels", help="vv_levels.bin of the release (next to this script by default)")
     ap.add_argument("--font", help="folder with font.png and font.fontmeta (next to this script by default)")
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
+
+    music = "none" if args.no_music else args.music
+    if music is None:
+        music = ask_music() if sys.stdin.isatty() else DEFAULT_MUSIC
+    song_rate, out_rate, music_text = MUSIC_CHOICES[music]
+    if not args.quiet:
+        print("music: %s" % music_text)
 
     src = Source(args.data)
     names = src.names()
@@ -253,24 +301,33 @@ def main():
         size = 0
         for low, real in sorted(lower.items()):
             if low.startswith("sounds/") and low.endswith(".wav"):
-                out = conv.run("sound", src.read(real), ".wav", 32000)
+                out = conv.run("sound", src.read(real), ".wav", out_rate)
                 files.append((low, out))
                 size += len(out)
-        say("sounds: %d, %.1f MB" % (sum(1 for n, _ in files if n.startswith("sounds/")), size / 1e6))
+        say("sounds: %d, %d Hz, %.1f MB" % (sum(1 for n, _ in files if n.startswith("sounds/")), out_rate, size / 1e6))
 
         # music
-        if not args.no_music:
+        if music != "none":
             songs = split_music_blob(src.read(lower["vvvvvvmusic.vvv"]))
             size = 0
             for i, name in enumerate(SONGS):
                 ogg = songs.get(name + ".ogg")
                 if ogg is None:
                     sys.exit("error: vvvvvvmusic.vvv has no %s.ogg" % name)
-                out = conv.run("music", ogg, ".ogg", args.music_rate, "adpcm")
+                if song_rate is None:
+                    # as it is: the console decodes it (vv_ogg.c), at its
+                    # rate (the output rate: 44.1 kHz)
+                    files.append(("music/%s.ogg" % name, ogg))
+                    size += len(ogg)
+                    continue
+                out = conv.run("music", ogg, ".ogg", song_rate, "adpcm")
                 files.append(("music/%s.mus" % name, out))
                 size += len(out)
                 say("music %2d/%d: %s" % (i + 1, len(SONGS), name))
-            say("music: %d songs, IMA ADPCM %d Hz, %.1f MB" % (len(SONGS), args.music_rate, size / 1e6))
+            if song_rate is None:
+                say("music: %d songs, Ogg Vorbis (not converted), %.1f MB" % (len(SONGS), size / 1e6))
+            else:
+                say("music: %d songs, IMA ADPCM %d Hz, %.1f MB" % (len(SONGS), song_rate, size / 1e6))
 
         with open(levels, "rb") as fh:
             files.append(("vv_levels.bin", fh.read()))
@@ -278,8 +335,9 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
 
     total = write_pack(args.output, sorted(files), verbose=not args.quiet)
-    if total > 56 * 1000 * 1000:
-        print("warning: the pack is %.1f MB: --music-rate 16000 makes it smaller" % (total / 1e6))
+    if total > FLASH_WARNING_BYTES:
+        print("warning: the pack is %.1f MB: it may not fit in the external flash of the console "
+              "(--music 32000, 22050 or 11025 make it smaller)" % (total / 1e6))
 
 
 if __name__ == "__main__":

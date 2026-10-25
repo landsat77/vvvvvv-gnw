@@ -80,6 +80,12 @@ bool vv_plat_find_file(const char *name, const uint8_t **data, uint32_t *size)
     return vv_pack_find(name, data, size);
 }
 
+void *vv_plat_alloc_static(size_t size)
+{
+    /* like DTCM on the console: outside the game heap */
+    return calloc(1, size);
+}
+
 const char *vv_plat_pack_name(uint32_t index)
 {
     return vv_pack_name(index);

@@ -1,7 +1,8 @@
 # VVVVVV — installation
 
 Requires Retro-Go SD **v2.0.0-rc1 or later** on the Game & Watch, and
-**about 45 MB free in its external flash** (the pack is copied there).
+**enough free room in its external flash** for the pack (44 MB by
+default), which is copied there.
 
 The game data is not included: you need the full game, VVVVVV 2.x, and its
 `data.zip` file:
@@ -21,8 +22,19 @@ The game data is not included: you need the full game, VVVVVV 2.x, and its
 
        py vv_pack.py VVVVVV.vvv "C:\Program Files (x86)\Steam\steamapps\common\VVVVVV\data.zip"
 
-   The pack is about 44 MB. Smaller: `--music-rate 16000` (about 24 MB,
-   duller music) or `--no-music` (about 3.5 MB).
+   The script asks which music to put in the pack (or give it with
+   `--music`):
+
+   | `--music` | Pack | Music |
+   |---|---|---|
+   | `ogg` | ~66 MB | original songs, not converted (best sound) |
+   | `32000` | ~44 MB | mono 32 kHz (default) |
+   | `22050` | ~31 MB | mono 22 kHz |
+   | `11025` | ~17 MB | mono 11 kHz |
+   | `none` | ~3.5 MB | no music |
+
+   `ogg` only works with an external flash bigger than 64 MB (the pack
+   and the firmware must fit in it).
 
    The pack goes with this version of `VVVVVV.bin` (the rooms of the game
    are in it): after an update, build it again.
@@ -47,7 +59,8 @@ card.
 # VVVVVV — installation (français)
 
 Nécessite Retro-Go SD **v2.0.0-rc1 ou plus récent** sur la Game & Watch, et
-**environ 45 Mo libres dans sa flash externe** (le pack y est copié).
+**assez de place libre dans sa flash externe** pour le pack (44 Mo par
+défaut), qui y est copié.
 
 Les données du jeu ne sont pas fournies : il faut le jeu complet,
 VVVVVV 2.x, et son fichier `data.zip` :
@@ -68,8 +81,19 @@ VVVVVV 2.x, et son fichier `data.zip` :
 
        py vv_pack.py VVVVVV.vvv "C:\Program Files (x86)\Steam\steamapps\common\VVVVVV\data.zip"
 
-   Le pack fait environ 44 Mo. Plus petit : `--music-rate 16000` (environ
-   24 Mo, musique plus sourde) ou `--no-music` (environ 3,5 Mo).
+   Le script demande quelle musique mettre dans le pack (ou la donner avec
+   `--music`) :
+
+   | `--music` | Pack | Musique |
+   |---|---|---|
+   | `ogg` | ~66 Mo | morceaux d'origine, sans conversion (meilleur son) |
+   | `32000` | ~44 Mo | mono 32 kHz (défaut) |
+   | `22050` | ~31 Mo | mono 22 kHz |
+   | `11025` | ~17 Mo | mono 11 kHz |
+   | `none` | ~3,5 Mo | pas de musique |
+
+   `ogg` ne marche qu'avec une flash externe de plus de 64 Mo (le pack et
+   le firmware doivent y tenir).
 
    Le pack va avec cette version de `VVVVVV.bin` (les salles du jeu sont
    dedans) : après une mise à jour, le refaire.

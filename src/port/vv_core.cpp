@@ -53,16 +53,20 @@ extern "C" void vv_core_update_keys(void)
 /* ------------------------------------------------------------------ */
 /* The map / pause menu slides over the last frame of the game
  * (Graphics::menuoffrender, gameplayTexture). The frame shown when the
- * menu opens is kept here (RGB332, 75 KB) while the menu is open. */
+ * menu opens is kept here (RGB332, 75 KB) while the menu is open: in
+ * memory outside the heap when the platform has some (DTCM), else in the
+ * heap until the game is drawn again. */
 static uint8_t* snapshot;
+static uint8_t* snapshot_static;
+static bool snapshot_tried;
 
 extern "C" void vv_core_game_frame(void)
 {
-    if (snapshot != NULL)
+    if (snapshot != NULL && snapshot != snapshot_static)
     {
         SDL_free(snapshot);
-        snapshot = NULL;
     }
+    snapshot = NULL;
 }
 
 static void take_snapshot(void)
@@ -72,7 +76,12 @@ static void take_snapshot(void)
     {
         return;
     }
-    snapshot = (uint8_t*) SDL_malloc(VV_WIDTH * VV_HEIGHT);
+    if (!snapshot_tried)
+    {
+        snapshot_static = (uint8_t*) vv_plat_alloc_static(VV_WIDTH * VV_HEIGHT);
+        snapshot_tried = true;
+    }
+    snapshot = snapshot_static != NULL ? snapshot_static : (uint8_t*) SDL_malloc(VV_WIDTH * VV_HEIGHT);
     if (snapshot == NULL)
     {
         return;

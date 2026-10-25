@@ -38,8 +38,8 @@
 /* Audio: the firmware's interrupt fills each DMA half buffer (16.7 ms)
  * from a ring the game fills ahead (VV_RING_AHEAD samples, ~64 ms): the
  * sound does not depend on when the game gets to it. VV_SAMPLE_RATE is
- * in vv_platform.h (the rate of the pack's samples). */
-#define VV_AUDIO_BUFFER_LENGTH 533      /* 32000 / 60 */
+ * the rate of the pack's samples (vv_platform.h). */
+/* DMA half buffer: rate / 60 (the rate comes with the pack) */
 #define VV_RING_SIZE  4096   /* power of 2 */
 #define VV_RING_AHEAD 2048
 #define VV_TICK_MS             16       /* buttons / menu / overlay rate */
@@ -122,6 +122,14 @@ const char *vv_plat_pack_name(uint32_t index)
 const char *vv_plat_save_dir(void)
 {
     return save_dir;
+}
+
+void *vv_plat_alloc_static(size_t size)
+{
+    /* DTCM: unused by the game (its stack is above the pool) */
+    void *p = dtc_malloc(size);
+    printf("vv: %u bytes in DTCM: %p\n", (unsigned)size, p);
+    return p;
 }
 
 /* The stack: 24 KB at the top of DTCM (firmware linker script). Painted at
@@ -533,7 +541,7 @@ void app_main(uint8_t load_state, uint8_t start_paused, int8_t save_slot)
     printf("VVVVVV start\n");
     stack_paint();
 
-    odroid_system_init(APPID_HOMEBREW, VV_SAMPLE_RATE);
+    odroid_system_init(APPID_HOMEBREW, 32000); /* the pack's rate below */
     odroid_system_emu_init(&vv_load_state, &vv_save_state, &screenshot, NULL, NULL, NULL, NULL);
 
     /* Same name as this .bin */
@@ -597,7 +605,10 @@ void app_main(uint8_t load_state, uint8_t start_paused, int8_t save_slot)
     common_emu_state.frame_time_10us = (uint16_t)(100000 / 30 + 0.5f);
 
     lcd_clear_buffers();
-    audio_start_playing(VV_AUDIO_BUFFER_LENGTH);
+    /* the rate of the pack's sounds: 44100, 32000 or 22050 */
+    odroid_audio_init(VV_SAMPLE_RATE);
+    printf("vv: audio %d Hz\n", VV_SAMPLE_RATE);
+    audio_start_playing((uint16_t)(VV_SAMPLE_RATE / 60));
     last_dma_counter = dma_counter;
     ring_start();
     {
