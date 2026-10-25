@@ -1,12 +1,8 @@
 /*
- * Pre-rendered music of VVVVVV (the Loudness / AdLib songs of music.mus).
- *
- * Synthesizing the AdLib music (OPL emulator) costs too much on the Game &
- * Watch: tools/vv_pack.py renders the songs once on the PC (harness, option
- * -R, vv_render.c) and stores them in the pack as "musicNN.mus" files. The
- * console plays them back in place from the pack (memory mapped flash),
- * looping from their loop start, or once for the songs that end
- * (vv_loudness.c).
+ * GWMU samples of the pack: the songs (music/<name>.mus) and the sound
+ * effects (sounds/<name>.wav) of VVVVVV, converted on the PC by
+ * tools/vv_pack.py (vv_render.c), decoded in place from the memory mapped
+ * flash (vv_music_game.cpp mixes them).
  *
  * The playback code comes from the Prince of Persia port (gnw_music.c).
  *
@@ -15,8 +11,8 @@
  *   0x04 u16  version    1
  *   0x06 u16  codec      0 = signed 16 bit PCM, 1 = IMA ADPCM; bit 15: the
  *                        piece ends (it does not loop)
- *   0x08 u32  rate       sample rate: 22050 (the output rate of the game) or
- *                        11025 (half the size, played back with a 16 tap
+ *   0x08 u32  rate       sample rate: 32000 (the output rate of the port) or
+ *                        16000 (half the size, played back with a 16 tap
  *                        interpolation filter; other rates: linear)
  *   0x0C u32  samples    number of mono samples
  *   0x10 u32  loop_start version 2 only: the piece goes on there after its

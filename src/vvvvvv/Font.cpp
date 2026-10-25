@@ -36,8 +36,15 @@ struct GlyphInfo
 
 /* Codepoints go up to U+10FFFF, so we have 0x110 (272) pages
  * of 0x1000 (4096) glyphs, allocated as needed */
+#ifdef GNW
+/* Pages of 256 glyphs in a few slots (number of the page + glyphs): the
+ * English font has glyphs in ~10 pages of 256, pages of 4096 were 98 KB */
+#define FONT_N_PAGES 32
+#define FONT_PAGE_SIZE 0x100
+#else
 #define FONT_N_PAGES 0x110
 #define FONT_PAGE_SIZE 0x1000
+#endif
 
 enum FontType
 {
@@ -58,6 +65,9 @@ struct Font
     SDL_Texture* image;
 
     GlyphInfo* glyph_page[FONT_N_PAGES];
+#ifdef GNW
+    uint16_t glyph_page_no[FONT_N_PAGES];
+#endif
 
     char fallback_key[64];
     uint8_t fallback_idx;
@@ -110,7 +120,11 @@ static void codepoint_split(
         codepoint_split(0xFFFD, page, glyph);
         return;
     }
+#ifdef GNW
+    *page = codepoint >> 8;
+#else
     *page = codepoint >> 12;
+#endif
     *glyph = codepoint % FONT_PAGE_SIZE;
 }
 
@@ -122,12 +136,23 @@ static GlyphInfo* get_glyphinfo(
     short page, glyph;
     codepoint_split(codepoint, &page, &glyph);
 
+#ifdef GNW
+    for (int i = 0; i < FONT_N_PAGES && f->glyph_page[i] != NULL; i++)
+    {
+        if (f->glyph_page_no[i] == page)
+        {
+            return &f->glyph_page[i][glyph];
+        }
+    }
+    return NULL;
+#else
     if (f->glyph_page[page] == NULL)
     {
         return NULL;
     }
 
     return &f->glyph_page[page][glyph];
+#endif
 }
 
 static void add_glyphinfo(
@@ -144,6 +169,29 @@ static void add_glyphinfo(
     short page, glyph;
     codepoint_split(codepoint, &page, &glyph);
 
+#ifdef GNW
+    {
+        int slot = 0;
+        while (slot < FONT_N_PAGES && f->glyph_page[slot] != NULL && f->glyph_page_no[slot] != page)
+        {
+            slot++;
+        }
+        if (slot == FONT_N_PAGES)
+        {
+            return; /* no slot left: the glyph is not shown */
+        }
+        if (f->glyph_page[slot] == NULL)
+        {
+            f->glyph_page[slot] = (GlyphInfo*) SDL_calloc(FONT_PAGE_SIZE, sizeof(GlyphInfo));
+            if (f->glyph_page[slot] == NULL)
+            {
+                return;
+            }
+            f->glyph_page_no[slot] = page;
+        }
+        page = slot;
+    }
+#else
     if (f->glyph_page[page] == NULL)
     {
         f->glyph_page[page] = (GlyphInfo*) SDL_calloc(FONT_PAGE_SIZE, sizeof(GlyphInfo));
@@ -152,6 +200,7 @@ static void add_glyphinfo(
             return;
         }
     }
+#endif
 
     f->glyph_page[page][glyph].image_idx = image_idx;
     f->glyph_page[page][glyph].advance = f->glyph_w;
@@ -334,6 +383,9 @@ static uint8_t load_font(FontContainer* container, const char* name)
 
     f->image = LoadImage(name_png, white_teeth ? TEX_COLOR : TEX_WHITE);
     SDL_zeroa(f->glyph_page);
+#ifdef GNW
+    SDL_zeroa(f->glyph_page_no);
+#endif
 
     if (f->image == NULL)
     {

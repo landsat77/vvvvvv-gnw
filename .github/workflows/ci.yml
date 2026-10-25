@@ -72,6 +72,7 @@ jobs:
             ${{ steps.meta.outputs.packed_bin }}
             ${{ steps.meta.outputs.target_elf }}
             ${{ steps.meta.outputs.target_map }}
+            build/homebrew/vv_levels.bin
           if-no-files-found: error
 
   release:
@@ -95,12 +96,12 @@ jobs:
           name: build-artifacts
           path: dist
 
-      - name: Set up Python (zig for the music renderers)
+      - name: Set up Python (zig for the renderers)
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Build the music renderers (Linux, Windows, macOS)
+      - name: Build the file converters (vv_render for Linux, Windows, macOS)
         run: |
           set -euo pipefail
           python3 -m pip install ziglang
@@ -117,6 +118,7 @@ jobs:
             --bin "dist/${PACKED_BIN}" \
             --elf "dist/${TARGET_ELF}" \
             --map "dist/${TARGET_MAP}" \
+            --levels "dist/build/homebrew/vv_levels.bin" \
             --tag "${GITHUB_REF_NAME}" \
             --out release \
             --docker-image "${{ env.DOCKER_IMAGE }}"

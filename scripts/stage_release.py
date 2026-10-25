@@ -181,6 +181,7 @@ def stage_release(
     docker_image: str | None,
     elf_path: Path | None,
     map_path: Path | None,
+    levels_path: Path | None = None,
 ) -> None:
     cfg = read_make_vars()
     project_kind = cfg["PROJECT_KIND"]
@@ -220,19 +221,28 @@ def stage_release(
 
     archive_name = f"{stem}-{tag_slug}.zip"
     archive_path = out_dir / archive_name
-    # Tyrian: the game data is not shipped (freeware, but not ours). Ship the tool
-    # that builds the .ty pack from the freeware Tyrian 2.1 files, with
-    # the ty_render programs it runs (tools/build_renderers.sh → tools/bin/).
+    # VVVVVV: the game data is not shipped (not ours to give). Ship the tool
+    # that builds the .vvv pack from the user's data.zip, with the vv_render
+    # programs it runs (tools/build_renderers.sh -> tools/bin/), the level /
+    # script tables of this binary (vv_levels.bin, made by the build) and the
+    # font of the VVVVVV 2.4 sources.
     members = [(sd_bin, f"{sd_dir}/{packed_name}")]
-    for extra in (ROOT / "tools" / "ty_pack.py", ROOT / "INSTALL.md", ROOT / "LICENSE"):
-        if extra.exists():
-            members.append((extra, extra.name))
-    renderers = sorted((ROOT / "tools" / "bin").glob("ty_render-*"))
+    levels = levels_path or (ROOT / "build" / "homebrew" / "vv_levels.bin")
+    if not levels.is_file():
+        raise SystemExit(f"vv_levels.bin not found: {levels}")
+    members.append((levels, "vv_levels.bin"))
+    for extra in (ROOT / "tools" / "vv_pack.py", ROOT / "INSTALL.md", ROOT / "LICENSE.md"):
+        if not extra.exists():
+            raise SystemExit(f"missing: {extra}")
+        members.append((extra, extra.name))
+    for asset in ("font.png", "font.fontmeta"):
+        members.append((ROOT / "tools" / "assets" / asset, f"assets/{asset}"))
+    renderers = sorted((ROOT / "tools" / "bin").glob("vv_render-*"))
     if not renderers:
-        print("warning: no ty_render in tools/bin (run tools/build_renderers.sh)",
+        print("warning: no vv_render in tools/bin (run tools/build_renderers.sh)",
               file=sys.stderr)
     for r in renderers:
-        members.append((r, f"ty_render/{r.name}"))
+        members.append((r, f"vv_render/{r.name}"))
     write_zip(archive_path, members)
 
     debug_archive_name = f"{stem}-{tag_slug}-debug.zip"
@@ -300,6 +310,12 @@ def main() -> None:
         type=Path,
         help="linker map (default: TARGET_MAP from Makefile)",
     )
+    parser.add_argument(
+        "--levels",
+        dest="levels_path",
+        type=Path,
+        help="vv_levels.bin of the build (default: build/homebrew/vv_levels.bin)",
+    )
     parser.add_argument("--tag", required=True, help="release tag (e.g. v1.0.0)")
     parser.add_argument(
         "--out",
@@ -336,6 +352,7 @@ def main() -> None:
         docker_image=args.docker_image,
         elf_path=args.elf_path,
         map_path=args.map_path,
+        levels_path=args.levels_path,
     )
 
 

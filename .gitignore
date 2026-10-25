@@ -1,5 +1,7 @@
 **/build/
 **/build_*/
+**/build32/
+**/buildlive/
 *.bin
 *.elf
 *.map

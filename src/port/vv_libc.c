@@ -17,7 +17,9 @@ int atexit(void (*fn)(void))
 
 int putchar(int c)
 {
-    printf("%c", c);
+    /* (not printf("%c"): GCC turns that into putchar) */
+    char s[2] = { (char)c, 0 };
+    printf("%s", s);
     return c;
 }
 

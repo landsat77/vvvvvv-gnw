@@ -202,7 +202,7 @@ def main():
     ap.add_argument("data", help="data.zip of VVVVVV 2.x (or the folder it was unzipped to)")
     ap.add_argument("--music-rate", type=int, choices=MUSIC_RATES, default=32000,
                     help="rate of the music: 32000 (default, ~40 MB) or 16000 (~20 MB)")
-    ap.add_argument("--no-music", action="store_true", help="no music (pack of ~3 MB)")
+    ap.add_argument("--no-music", action="store_true", help="no music (pack of ~3.5 MB)")
     ap.add_argument("--renderer", help="vv_render program (vv_render/ next to this script by default)")
     ap.add_argument("--levels", help="vv_levels.bin of the release (next to this script by default)")
     ap.add_argument("--font", help="folder with font.png and font.fontmeta (next to this script by default)")

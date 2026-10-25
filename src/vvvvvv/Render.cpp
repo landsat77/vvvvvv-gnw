@@ -231,6 +231,12 @@ static void menurender(void)
         const bool fonts_error = !FILESYSTEM_doesFontsDirExist();
         const bool lang_error = !FILESYSTEM_doesLangDirExist();
 
+#ifdef GNW
+        /* a modified version (VVVVVV source code license): said here */
+        left_msg = "[Game & Watch port]";
+        (void) fonts_error;
+        (void) lang_error;
+#else
         if (fonts_error && lang_error)
         {
             left_msg = "[No fonts&lang folders]";
@@ -247,6 +253,7 @@ static void menurender(void)
         {
             left_msg = loc::gettext("[MMMMMM Mod Installed]");
         }
+#endif
 
         if (left_msg != NULL)
         {

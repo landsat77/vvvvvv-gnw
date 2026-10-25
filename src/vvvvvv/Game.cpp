@@ -6570,7 +6570,13 @@ void Game::createmenu( enum Menu::MenuName t, bool samemenu/*= false*/ )
 #if !defined(MAKEANDPLAY)
         option(loc::gettext("play"));
 #endif
+#ifdef GNW
+        /* no player levels on the Game & Watch (greyed out: the menu code
+         * goes by the position of the options) */
+        option(loc::gettext("levels"), false);
+#else
         option(loc::gettext("levels"));
+#endif
         option(loc::gettext("options"));
         if (loc::show_translator_menu)
         {
@@ -6818,11 +6824,21 @@ void Game::createmenu( enum Menu::MenuName t, bool samemenu/*= false*/ )
     }
     case Menu::options:
         option(loc::gettext("gameplay"));
+#ifdef GNW
+        /* the screen is the console's (no window, scaling, filter...), its
+         * buttons are not a game pad, English only */
+        option(loc::gettext("graphics"), false);
+        option(loc::gettext("audio"));
+        option(loc::gettext("game pad"), false);
+        option(loc::gettext("accessibility"));
+        option(loc::gettext("language"), false);
+#else
         option(loc::gettext("graphics"));
         option(loc::gettext("audio"));
         option(loc::gettext("game pad"));
         option(loc::gettext("accessibility"));
         option(loc::gettext("language"), !translator_cutscene_test);
+#endif
         option(loc::gettext("return"));
         menuyoff = 0;
         maxspacing = 15;

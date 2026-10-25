@@ -455,8 +455,8 @@ struct SDL_Texture {
     /* the palette through the modulation, for the last (r, g, b, a) used */
     bool cache_valid;
     Uint8 cr, cg, cb, ca;
-    uint16_t pal565[256];
-    uint8_t pala[256];
+    uint16_t *pal565;      /* im.ncolors entries (images only) */
+    uint8_t *pala;
 };
 
 struct SDL_Renderer {
@@ -552,6 +552,12 @@ SDL_Texture *vv_sdl_image_texture(const uint8_t *data, uint32_t size, int load)
     SDL_Texture *t = texture_new(TEX_IMAGE, im.w, im.h);
     if (!t)
         return NULL;
+    t->pal565 = SDL_malloc(im.ncolors * 3);
+    if (!t->pal565) {
+        SDL_free(t);
+        return NULL;
+    }
+    t->pala = (uint8_t *)(t->pal565 + im.ncolors);
     t->im = im;
     t->load = load;
     return t;
@@ -574,6 +580,8 @@ void SDL_DestroyTexture(SDL_Texture *t)
 {
     if (the_renderer.target == t)
         the_renderer.target = NULL;
+    if (t)
+        SDL_free(t->pal565);
     SDL_free(t);
 }
 

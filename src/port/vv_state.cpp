@@ -33,9 +33,12 @@ static bool pending_jump;
 
 extern "C" bool vv_core_can_save(void)
 {
+    /* not in a cutscene (its script is not saved: loading would give a
+     * room without the rest of the cutscene) */
     return loop_ready
         && (game.gamestate == GAMEMODE || game.gamestate == MAPMODE)
         && !map.custommode && !game.inspecial()
+        && !script.running && game.hascontrol
         && obj.getplayer() > -1;
 }
 
@@ -50,8 +53,8 @@ extern "C" bool vv_core_save_state(const char* path)
     const int savex = game.savex, savey = game.savey, saverx = game.saverx, savery = game.savery;
     const int savegc = game.savegc, savedir = game.savedir;
     const int p = obj.getplayer();
-    if (game.gamestate == GAMEMODE && !script.running && game.deathseq == -1 && !map.towermode
-        && !game.teleport && game.completestop == false)
+    if (game.gamestate == GAMEMODE && game.deathseq == -1 && !map.towermode
+        && !game.teleport && !game.completestop)
     {
         const entclass& pl = obj.entities[p];
         game.savex = pl.xp;

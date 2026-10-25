@@ -64,13 +64,14 @@ CXX_OBJECTS := $(filter-out $(BUILD_DIR)/gw_core_cxx_support.o,$(CXX_OBJECTS))
 # VVVVVV specific flags
 #######################################
 VV_WARN := -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function \
-	-Wno-unused-parameter -Wno-missing-braces -Wno-format-truncation -Wno-sign-compare \
-	-Wno-class-memaccess
-CXXFLAGS += -std=gnu++17 $(VV_WARN)
+	-Wno-unused-parameter -Wno-missing-braces -Wno-format-truncation -Wno-sign-compare
+CXXFLAGS += -std=gnu++17 $(VV_WARN) -Wno-class-memaccess
 CFLAGS += $(VV_WARN)
 GLUE := -include $(VV_PORT)/gnw_vv_glue.h
 GLUED_OBJECTS := $(addprefix $(BUILD_DIR)/,$(VV_C_FILES:.c=.o) map.o Font.o)
 $(GLUED_OBJECTS): CFLAGS += $(GLUE)
+# (its putchar must not become a call to itself)
+$(BUILD_DIR)/vv_libc.o: CFLAGS += -fno-builtin-printf -fno-builtin-putchar
 $(GLUED_OBJECTS): CXXFLAGS += $(GLUE)
 $(C_OBJECTS) $(CXX_OBJECTS): Makefile $(VV_GEN)/vv_levels_gen.h
 
