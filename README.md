@@ -1,5 +1,8 @@
 # VVVVVV for Game & Watch Retro-Go SD
 
+<img width="2880" height="2160" alt="image" src="https://github.com/user-attachments/assets/c575d52f-e94b-4fff-bf73-7349872e5353" />
+
+
 Terry Cavanagh's **VVVVVV** (2.4.2) running on the Nintendo Game & Watch
 (Mario / Zelda) as a **Retro-Go SD homebrew** (`/homebrews/VVVVVV.bin`,
 firmware v2.0.0-rc1 or later).
